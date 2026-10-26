@@ -1,0 +1,35 @@
+---
+import Base from '../../layouts/Base.astro';
+import { getCollection, render } from 'astro:content';
+const entries = (await getCollection('log')).sort((a, b) => +b.data.date - +a.data.date);
+const items = await Promise.all(entries.map(async (e) => ({ e, Content: (await render(e)).Content })));
+---
+<Base title="学习日志 · Helix">
+  <main class="section"><div class="wrap narrow">
+    <p class="eyebrow">学习日志</p>
+    <h1 class="h2">每天进步一点</h1>
+    <ol class="log">
+      {items.map(({ e, Content }) => (
+        <li>
+          <time>{e.data.date.toISOString().slice(0, 10)}</time>
+          <div>
+            <h2>{e.data.title}</h2>
+            <div class="body"><Content /></div>
+            <p class="tags">{e.data.tags.map((t) => <span>{t}</span>)}</p>
+          </div>
+        </li>
+      ))}
+    </ol>
+  </div></main>
+</Base>
+<style>
+  .narrow { max-width: 760px; }
+  .log { list-style: none; padding: 0; margin: 0; }
+  .log > li { display: grid; grid-template-columns: 7em 1fr; gap: 16px; padding: 22px 0; border-top: 1px solid var(--line); }
+  time { color: var(--muted); font-size: 14px; padding-top: 3px; font-variant-numeric: tabular-nums; }
+  .log h2 { font-size: 18px; }
+  .body :global(p) { margin: 6px 0; color: var(--muted); }
+  .tags { display: flex; gap: 8px; margin: 8px 0 0; }
+  .tags span { font-size: 12px; color: var(--muted); border: 1px solid var(--line); border-radius: 99px; padding: 1px 10px; }
+  @media (max-width: 640px) { .log > li { grid-template-columns: 1fr; gap: 4px; } }
+</style>

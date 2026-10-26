@@ -1,0 +1,54 @@
+---
+import '../styles/global.css';
+import { profile } from '../data/site';
+interface Props { title?: string; description?: string }
+const { title = `${profile.name} · ${profile.title}`, description = profile.tagline } = Astro.props;
+const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
+const year = new Date().getFullYear();
+const links = [
+  { href: `${base}#projects`, label: '项目' },
+  { href: `${base}#experience`, label: '经历' },
+  { href: `${base}console/`, label: '中控' },
+  { href: `${base}writing/`, label: '文章' },
+  { href: `${base}log/`, label: '日志' },
+  { href: `${base}#contact`, label: '联系' },
+];
+---
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <link rel="icon" href={`${base}favicon.svg`} type="image/svg+xml" />
+  </head>
+  <body>
+    <header class="nav">
+      <div class="wrap nav-in">
+        <a class="brand" href={base}>{profile.name}</a>
+        <nav>{links.map((l) => <a href={l.href}>{l.label}</a>)}</nav>
+      </div>
+    </header>
+    <slot />
+    <footer class="foot"><div class="wrap">© {year} {profile.name} · {profile.location}</div></footer>
+  </body>
+</html>
+<style>
+  .nav {
+    position: sticky; top: 0; z-index: 10;
+    background: color-mix(in srgb, var(--bg) 80%, transparent);
+    backdrop-filter: saturate(180%) blur(20px);
+    -webkit-backdrop-filter: saturate(180%) blur(20px);
+    border-bottom: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
+  }
+  .nav-in { display: flex; align-items: center; justify-content: space-between; height: 52px; gap: 12px; }
+  .brand { color: var(--text); font-weight: 700; font-size: 18px; }
+  .nav nav { display: flex; gap: 20px; }
+  .nav nav a { color: var(--muted); font-size: 14px; white-space: nowrap; }
+  .nav nav a:hover { color: var(--text); text-decoration: none; }
+  .foot { color: var(--muted); font-size: 13px; padding: 28px 0 40px; border-top: 1px solid var(--line); }
+  @media (max-width: 480px) { .nav nav { gap: 12px; } .nav nav a { font-size: 13px; } }
+</style>

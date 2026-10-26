@@ -1,0 +1,396 @@
+---
+import Base from '../layouts/Base.astro';
+import demo from '../console/demo-run.json';
+import type { RunSnapshot } from '../console/types';
+const run = demo as RunSnapshot;
+
+// 流程图节点位置（viewBox 960×420）
+const nodes = [
+  { id: 'intake', x: 80, y: 210, title: '任务入口', sub: '任务单 · 微信 · 定时' },
+  { id: 'brain', x: 260, y: 210, title: 'Claude Code', sub: '主脑：拆单 · 路由' },
+  { id: 'dsh', x: 480, y: 105, title: 'dsh + DeepSeek', sub: '便宜模型 · 批量执行' },
+  { id: 'codex', x: 480, y: 315, title: 'Codex', sub: '找 bug · 写代码' },
+  { id: 'runs', x: 680, y: 210, title: 'runs/', sub: '产出文件 · 可追溯' },
+  { id: 'review', x: 860, y: 210, title: '验收', sub: 'Claude 抽查' },
+  { id: 'status', x: 860, y: 362, title: 'STATUS', sub: '真相源 · 决策记录' },
+];
+const edges: Record<string, string> = {
+  'intake-brain': 'M150 210 H190',
+  'brain-dsh': 'M330 196 C 375 196, 370 105, 410 105',
+  'brain-codex': 'M330 224 C 375 224, 370 315, 410 315',
+  'dsh-runs': 'M550 105 C 590 105, 580 196, 610 196',
+  'codex-runs': 'M550 315 C 590 315, 580 224, 610 224',
+  'runs-review': 'M750 210 H790',
+  'review-status': 'M860 238 V334',
+  'review-brain': 'M860 182 C 860 -48, 260 -48, 260 182',
+  'brain-status': 'M260 238 C 260 400, 600 380, 790 365',
+};
+const reject = new Set(['review-brain']);
+---
+<Base title="总中控 · Helix" description="多 Agent 调度中枢的一次运行回放：Claude 规划验收，便宜模型批量执行。">
+  <main class="console">
+    <section class="intro wrap">
+      <div>
+        <p class="eyebrow">总中控 · 运行回放</p>
+        <h1>一个人，指挥一支 AI 团队</h1>
+        <p class="lead">这是我的多 Agent 调度中枢的一轮运行：Claude Code 拆任务、派活、验收，便宜模型批量执行，Codex 负责代码，每一步产出都落到文件里，可以追溯。</p>
+      </div>
+      <p class="badge">{run.isDemo ? '示例数据 · 只读回放' : '真实运行快照 · 已脱敏'}</p>
+    </section>
+
+    <section class="wrap kpis" aria-label="本轮指标">
+      <div class="kpi"><span class="k-label">完成任务</span><span class="k-val"><b id="k-done">0</b> / {run.tasks.length}</span></div>
+      <div class="kpi"><span class="k-label">验收打回</span><span class="k-val"><b id="k-reject">0</b> 次</span></div>
+      <div class="kpi"><span class="k-label">本轮花费</span><span class="k-val">¥<b id="k-cost">0.00</b></span></div>
+      <div class="kpi"><span class="k-label">比全用强模型省</span><span class="k-val"><b id="k-save">0</b>%</span></div>
+      <div class="kpi clock"><span class="k-label">模拟时钟</span><span class="k-val mono" id="k-clock">08:30:00</span></div>
+    </section>
+
+    <section class="wrap stage">
+      <div class="panel flow">
+        <div class="panel-head">
+          <h2>数据流转</h2>
+          <div class="ctrl">
+            <button type="button" id="btn-play" aria-pressed="true">暂停</button>
+            <button type="button" id="btn-speed">1×</button>
+            <button type="button" id="btn-replay">重播</button>
+          </div>
+        </div>
+        <div class="flow-scroll"><svg viewBox="0 -30 960 450" class="flow-svg" role="img" aria-label="任务从入口经 Claude Code 分派给 dsh 或 Codex，产出写入 runs，再由 Claude 验收，通过后更新 STATUS，未通过则打回重派">
+          <g class="edges">
+            {Object.entries(edges).map(([k, d]) => <path id={`e-${k}`} d={d} class={`edge ${reject.has(k) ? 'edge-reject' : ''}`} />)}
+          </g>
+          <text x="560" y="-8" class="edge-label">验收不通过 → 打回重派</text>
+          <g class="nodes">
+            {nodes.map((n) => (
+              <g class="node" id={`n-${n.id}`} transform={`translate(${n.x - 70} ${n.y - 28})`}>
+                <rect width="140" height="56" rx="14" />
+                <text x="70" y="25" text-anchor="middle" class="n-title">{n.title}</text>
+                <text x="70" y="42" text-anchor="middle" class="n-sub">{n.sub}</text>
+              </g>
+            ))}
+          </g>
+          <g id="packets"></g>
+        </svg></div>
+        <p class="swipe">左右滑动查看完整流程</p>
+        <ul class="legend">
+          <li><i class="lg lg-claude"></i>Claude：规划 · 验收</li>
+          <li><i class="lg lg-dsh"></i>dsh：批量执行</li>
+          <li><i class="lg lg-codex"></i>Codex：代码</li>
+        </ul>
+      </div>
+
+    </section>
+
+    <section class="wrap row2">
+      <div class="panel log">
+        <div class="panel-head"><h2>运行日志</h2><span class="live"><i></i>回放中</span></div>
+        <ol id="log" class="log-list" aria-live="off"></ol>
+      </div>
+      <div class="panel board">
+        <div class="panel-head"><h2>任务看板</h2><span class="hint">点开任务看任务单和验收结论</span></div>
+        <div class="cols">
+          {[['todo', '待办'], ['running', '执行中'], ['review', '验收中'], ['done', '完成']].map(([k, label]) => (
+            <div class="col" data-col={k}>
+              <h3>{label} <span class="cnt" data-cnt={k}>0</span></h3>
+              <div class="col-body" id={`col-${k}`}></div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+
+    <section class="wrap explain">
+      <div><h3>它解决什么</h3><p>同时用很多 AI 工具时，任务散、成本高、结果没人把关。这里把「谁来做、做得对不对」变成固定流程。</p></div>
+      <div><h3>我做了什么</h3><p>设计任务单格式和 runs/ 文件契约，让强模型只做规划和验收，重复劳动交给便宜模型，打回的经验自动沉淀成规则。</p></div>
+      <div><h3>用了什么</h3><p>Claude Code、DeepSeek（经 dsh 调度）、Codex；状态全部存成文件，换框架也能续跑。</p></div>
+    </section>
+
+    <dialog id="detail" class="detail">
+      <form method="dialog"><button class="close" aria-label="关闭">×</button></form>
+      <div id="detail-body"></div>
+    </dialog>
+  </main>
+  <script id="run-data" type="application/json" set:html={JSON.stringify(run)}></script>
+</Base>
+
+<script>
+  import type { RunSnapshot, RunEvent, TaskStatus } from '../console/types';
+  const run: RunSnapshot = JSON.parse(document.getElementById('run-data')!.textContent!);
+  const tasks = new Map(run.tasks.map((t) => [t.id, t]));
+  const color = (ex: string) => `var(--c-${ex})`;
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  const $ = (id: string) => document.getElementById(id)!;
+  const logEl = $('log');
+  const packets = $('packets');
+  const end = run.events[run.events.length - 1].t + 4;
+
+  let t = 0, speed = 1, playing = true, idx = 0, last = performance.now();
+  let state = new Map<string, TaskStatus>();
+  let rejects = 0;
+
+  const clock = (sec: number) => {
+    const s = 8 * 3600 + 30 * 60 + Math.round(sec * 20);
+    return [Math.floor(s / 3600), Math.floor(s / 60) % 60, s % 60].map((n) => String(n).padStart(2, '0')).join(':');
+  };
+
+  function reset() {
+    t = 0; idx = 0; rejects = 0; state = new Map();
+    logEl.innerHTML = '';
+    packets.innerHTML = '';
+    document.querySelectorAll('.col-body').forEach((c) => (c.innerHTML = ''));
+    document.querySelectorAll('.node').forEach((n) => n.classList.remove('on'));
+    updateKpis();
+    updateCounts();
+  }
+
+  function updateKpis() {
+    const done = [...state.entries()].filter(([, s]) => s === 'done').map(([id]) => tasks.get(id)!);
+    const cost = done.reduce((a, x) => a + x.costCny, 0);
+    const strong = done.reduce((a, x) => a + x.costIfStrongCny, 0);
+    $('k-done').textContent = String(done.length);
+    $('k-reject').textContent = String(rejects);
+    $('k-cost').textContent = cost.toFixed(2);
+    $('k-save').textContent = strong ? String(Math.round((1 - cost / strong) * 100)) : '0';
+    $('k-clock').textContent = clock(t);
+  }
+
+  function updateCounts() {
+    for (const k of ['todo', 'running', 'review', 'done']) {
+      document.querySelector(`[data-cnt="${k}"]`)!.textContent = String($(`col-${k}`).children.length);
+    }
+  }
+
+  function card(id: string) {
+    let el = document.getElementById(`card-${id}`);
+    if (!el) {
+      const task = tasks.get(id)!;
+      el = document.createElement('button');
+      el.type = 'button';
+      el.id = `card-${id}`;
+      el.className = 'tcard';
+      el.style.setProperty('--c', color(task.executor));
+      el.innerHTML = `<span class="tc-id">${task.id}</span><span class="tc-title">${task.title}</span><span class="tc-ex">${task.model}</span>`;
+      el.addEventListener('click', () => openDetail(id));
+    }
+    return el;
+  }
+
+  function move(id: string, s: TaskStatus) {
+    state.set(id, s);
+    const el = card(id);
+    $(`col-${s}`).prepend(el);
+    el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash');
+    updateCounts();
+  }
+
+  function flashNode(n: string) {
+    const el = document.getElementById(`n-${n}`);
+    if (!el) return;
+    el.classList.add('on');
+    setTimeout(() => el.classList.remove('on'), 1400 / speed);
+  }
+
+  function sendPacket(ev: RunEvent) {
+    const key = `${ev.from}-${ev.to}`;
+    const path = document.getElementById(`e-${key}`) as SVGPathElement | null;
+    flashNode(ev.from);
+    if (!path || reduce) { flashNode(ev.to); return; }
+    const ex = ev.type === 'review' || ev.type === 'accept' || ev.type === 'reject' || ev.type === 'plan' || ev.type === 'status' || ev.type === 'create'
+      ? 'claude' : tasks.get(ev.task)!.executor;
+    const c = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    c.setAttribute('r', '7');
+    c.setAttribute('class', `pkt ${ev.type === 'reject' ? 'pkt-reject' : ''}`);
+    c.style.fill = ev.type === 'reject' ? 'var(--c-reject)' : color(ex);
+    packets.appendChild(c);
+    const len = path.getTotalLength();
+    const dur = 1100;
+    const start = performance.now();
+    const step = (now: number) => {
+      const k = Math.min(1, ((now - start) * speed) / dur);
+      const e = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+      const p = path.getPointAtLength(e * len);
+      c.setAttribute('cx', String(p.x)); c.setAttribute('cy', String(p.y));
+      if (k < 1) requestAnimationFrame(step); else { c.remove(); flashNode(ev.to); }
+    };
+    requestAnimationFrame(step);
+  }
+
+  const typeLabel: Record<string, string> = { create: '新任务', plan: '规划', dispatch: '派活', write: '写入', review: '验收', reject: '打回', accept: '通过', status: '状态' };
+
+  function log(ev: RunEvent) {
+    const task = tasks.get(ev.task)!;
+    const who = ['review', 'accept', 'reject', 'plan', 'status', 'create'].includes(ev.type) ? 'Claude' : task.executor === 'dsh' ? 'dsh' : task.executor === 'codex' ? 'Codex' : 'Claude';
+    const li = document.createElement('li');
+    li.className = `ll ll-${ev.type}`;
+    li.innerHTML = `<span class="ll-t mono">${clock(ev.t)}</span><span class="ll-who">${who}</span><span class="ll-type">${typeLabel[ev.type]}</span><span class="ll-msg"><b>${ev.task}</b> ${ev.msg}</span>`;
+    logEl.prepend(li);
+    while (logEl.children.length > 40) logEl.lastElementChild!.remove();
+  }
+
+  function apply(ev: RunEvent) {
+    log(ev);
+    sendPacket(ev);
+    if (ev.type === 'create') move(ev.task, 'todo');
+    if (ev.type === 'dispatch') move(ev.task, 'running');
+    if (ev.type === 'write' || ev.type === 'status') move(ev.task, 'review');
+    if (ev.type === 'reject') { rejects++; move(ev.task, 'todo'); }
+    if (ev.type === 'accept') move(ev.task, 'done');
+    updateKpis();
+  }
+
+  function openDetail(id: string) {
+    const task = tasks.get(id)!;
+    const s = state.get(id) ?? 'todo';
+    const doneNow = s === 'done' && task.result;
+    const r = task.result!;
+    const exName = { claude: 'Claude Code', dsh: 'dsh', codex: 'Codex' }[task.executor];
+    $('detail-body').innerHTML = `
+      <p class="eyebrow">${task.id} · ${exName} · ${task.model}</p>
+      <h2>${task.title}</h2>
+      <h3>任务单</h3><p>${task.brief}</p>
+      <h3>验收结论</h3>
+      ${doneNow ? `<dl class="rr">
+        <dt>STATUS</dt><dd><span class="ok">${r.status}</span></dd>
+        <dt>FILE</dt><dd class="mono">${r.file}</dd>
+        <dt>SUMMARY</dt><dd>${r.summary}</dd>
+        <dt>CONFIDENCE</dt><dd>${r.confidence.toFixed(2)}</dd>
+        <dt>花费</dt><dd>¥${task.costCny.toFixed(2)}（全用强模型约 ¥${task.costIfStrongCny.toFixed(2)}）</dd>
+      </dl>` : `<p class="muted">还在流程中，验收后显示。</p>`}
+      <p class="muted small">${run.isDemo ? '示例数据，仅作演示。' : ''}</p>`;
+    ($('detail') as HTMLDialogElement).showModal();
+  }
+
+  function frame(now: number) {
+    const dt = (now - last) / 1000; last = now;
+    if (playing) {
+      t += dt * speed;
+      while (idx < run.events.length && run.events[idx].t <= t) apply(run.events[idx++]);
+      $('k-clock').textContent = clock(Math.min(t, end));
+      if (t >= end) reset();
+    }
+    requestAnimationFrame(frame);
+  }
+
+  $('btn-play').addEventListener('click', (e) => {
+    playing = !playing;
+    const b = e.currentTarget as HTMLButtonElement;
+    b.textContent = playing ? '暂停' : '播放';
+    b.setAttribute('aria-pressed', String(playing));
+  });
+  $('btn-speed').addEventListener('click', (e) => {
+    speed = speed === 1 ? 2 : speed === 2 ? 4 : 1;
+    (e.currentTarget as HTMLButtonElement).textContent = `${speed}×`;
+  });
+  $('btn-replay').addEventListener('click', reset);
+
+  reset();
+  requestAnimationFrame((n) => { last = n; frame(n); });
+</script>
+
+<style is:global>
+  .console {
+    --c-claude: #23466e; --c-dsh: #3f8f7f; --c-codex: #b0793a; --c-reject: #b5483b;
+    padding-bottom: 72px;
+  }
+  @media (prefers-color-scheme: dark) {
+    .console { --c-claude: #9dbbe0; --c-dsh: #7cc4b3; --c-codex: #deae74; --c-reject: #e28a7e; }
+  }
+  .mono { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-variant-numeric: tabular-nums; }
+  .intro { display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; padding-top: 72px; padding-bottom: 28px; flex-wrap: wrap; }
+  .intro > div { min-width: 0; max-width: 40em; }
+  .intro h1 { font-family: var(--font-serif); font-size: clamp(30px, 5vw, 48px); line-height: 1.2; margin-top: 10px; text-wrap: balance; }
+  .intro .lead { color: var(--muted); font-size: 18px; margin: 16px 0 0; }
+  .badge { margin: 0; font-size: 13px; color: var(--muted); border: 1px solid var(--line); border-radius: 99px; padding: 4px 14px; white-space: nowrap; }
+
+  .kpis { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 16px; }
+  .kpi { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px 18px; display: flex; flex-direction: column; gap: 2px; }
+  .k-label { font-size: 13px; color: var(--muted); }
+  .k-val { font-size: 22px; font-variant-numeric: tabular-nums; }
+  .k-val b { font-weight: 650; }
+
+  .stage { margin-bottom: 16px; }
+  .row2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.8fr); gap: 16px; align-items: stretch; }
+  .panel { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 18px 20px; min-width: 0; }
+  .panel-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+  .panel-head h2 { font-size: 16px; }
+  .ctrl { display: flex; gap: 6px; }
+  .ctrl button { font: inherit; font-size: 13px; height: 30px; padding: 0 12px; border-radius: 99px; border: 1px solid var(--line); background: transparent; color: var(--text); cursor: pointer; }
+  .ctrl button:hover { border-color: var(--text); }
+  .ctrl button:focus-visible, .tcard:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .flow-scroll { overflow-x: auto; }
+  .flow-svg { width: 100%; height: auto; display: block; }
+  @media (max-width: 700px) { .flow-svg { min-width: 680px; } }
+  .edge { fill: none; stroke: var(--line); stroke-width: 2; }
+  .edge-reject { stroke-dasharray: 5 6; stroke: color-mix(in srgb, var(--c-reject) 45%, var(--line)); }
+  .edge-label { font-size: 12px; fill: var(--muted); text-anchor: middle; }
+  .node rect { fill: var(--bg); stroke: var(--line); stroke-width: 1.5; transition: fill .3s, stroke .3s; }
+  .node .n-title { font-size: 14px; font-weight: 650; fill: var(--text); }
+  .node .n-sub { font-size: 10.5px; fill: var(--muted); }
+  .node.on rect { stroke: var(--accent); fill: color-mix(in srgb, var(--accent) 10%, var(--card)); }
+  #n-brain rect { stroke: var(--accent); stroke-width: 2; }
+  .pkt { filter: drop-shadow(0 0 4px rgba(0,0,0,.18)); }
+  .hint { font-size: 13px; color: var(--muted); }
+  .swipe { display: none; font-size: 12px; color: var(--muted); margin: 4px 0 0; }
+  @media (max-width: 700px) { .swipe { display: block; } }
+  .legend { list-style: none; display: flex; gap: 18px; flex-wrap: wrap; padding: 0; margin: 6px 0 0; font-size: 13px; color: var(--muted); }
+  .lg { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: -1px; }
+  .lg-claude { background: var(--c-claude); } .lg-dsh { background: var(--c-dsh); } .lg-codex { background: var(--c-codex); }
+
+  .log { display: flex; flex-direction: column; }
+  .live { font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 6px; }
+  .live i { width: 7px; height: 7px; border-radius: 50%; background: var(--c-dsh); }
+  @media (prefers-reduced-motion: no-preference) { .live i { animation: blink 1.4s infinite; } }
+  .log-list { list-style: none; margin: 0; padding: 0; height: 330px; overflow: hidden; font-size: 13px; mask-image: linear-gradient(#000 75%, transparent); }
+  .ll { display: grid; grid-template-columns: auto auto 1fr; grid-template-areas: "t who type" "msg msg msg"; gap: 8px; padding: 7px 0; border-bottom: 1px solid color-mix(in srgb, var(--line) 60%, transparent); align-items: baseline; }
+  @media (prefers-reduced-motion: no-preference) { .ll:first-child { animation: in .4s ease-out; } }
+  .ll-t { color: var(--muted); font-size: 12px; }
+  .ll-who { font-weight: 600; font-size: 12px; }
+  .ll-type { font-size: 11px; border-radius: 99px; padding: 0 7px; border: 1px solid var(--line); color: var(--muted); }
+  .ll-accept .ll-type { color: var(--c-dsh); border-color: var(--c-dsh); }
+  .ll-reject .ll-type { color: var(--c-reject); border-color: var(--c-reject); }
+  .ll-msg { min-width: 0; grid-area: msg; }
+  .ll-type { justify-self: start; }
+
+  .board .cols { display: grid; grid-template-columns: repeat(4, minmax(140px, 1fr)); gap: 12px; overflow-x: auto; }
+  .col { background: var(--bg); border-radius: 12px; padding: 10px; min-height: 300px; }
+  .col h3 { font-size: 13px; color: var(--muted); font-weight: 600; margin: 2px 4px 10px; display: flex; justify-content: space-between; }
+  .col-body { display: flex; flex-direction: column; gap: 8px; }
+  .tcard { text-align: left; font: inherit; background: var(--card); color: var(--text); border: 1px solid var(--line); border-left: 4px solid var(--c); border-radius: 10px; padding: 9px 11px; display: grid; gap: 2px; cursor: pointer; }
+  .tcard:hover { border-color: var(--c); }
+  .tc-id { font-size: 11px; color: var(--muted); }
+  .tc-title { font-size: 14px; line-height: 1.4; }
+  .tc-ex { font-size: 12px; color: var(--muted); }
+  @media (prefers-reduced-motion: no-preference) { .tcard.flash { animation: flash 1s ease-out; } }
+
+  .explain { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-top: 48px; }
+  .explain h3 { font-family: var(--font-serif); font-size: 20px; margin-bottom: 6px; }
+  .explain p { margin: 0; color: var(--muted); }
+
+  .detail { border: 1px solid var(--line); border-radius: 18px; padding: 24px 28px; max-width: min(560px, calc(100vw - 32px)); background: var(--card); color: var(--text); }
+  .detail::backdrop { background: rgba(10, 12, 16, .35); }
+  .detail h2 { font-family: var(--font-serif); font-size: 24px; margin: 4px 0 12px; }
+  .detail h3 { font-size: 14px; color: var(--muted); margin: 16px 0 4px; }
+  .detail p { margin: 0; }
+  .detail .close { position: absolute; right: 14px; top: 10px; border: 0; background: none; font-size: 22px; color: var(--muted); cursor: pointer; }
+  .rr { display: grid; grid-template-columns: 7.5em 1fr; gap: 6px 12px; margin: 6px 0 0; font-size: 14px; }
+  .rr dt { color: var(--muted); font-size: 12px; letter-spacing: .03em; padding-top: 2px; }
+  .rr dd { margin: 0; min-width: 0; word-break: break-all; }
+  .ok { color: var(--c-dsh); font-weight: 650; }
+  .muted { color: var(--muted); } .small { font-size: 12px; margin-top: 14px !important; }
+
+  @keyframes blink { 50% { opacity: .25; } }
+  @keyframes in { from { opacity: 0; transform: translateY(-6px); } }
+  @keyframes flash { from { box-shadow: 0 0 0 4px color-mix(in srgb, var(--c) 35%, transparent); } }
+
+  @media (max-width: 900px) {
+    .row2 { grid-template-columns: 1fr; }
+    .log-list { height: 260px; }
+    .kpis { grid-template-columns: repeat(2, 1fr); }
+    .kpi.clock { grid-column: 1 / -1; }
+    .explain { grid-template-columns: 1fr; gap: 18px; }
+    .intro { padding-top: 48px; }
+  }
+</style>

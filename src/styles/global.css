@@ -1,0 +1,64 @@
+/* 主题变量：换风格时主要改这里 */
+/* v2 方向（按打分）：苹果的明亮留白 + Harvey 的大号衬线标题 + 中伦的水墨抽象插图 */
+:root {
+  --bg: #f8f7f4;          /* 纸白，略暖 */
+  --bg-alt: #efeee9;
+  --card: #ffffff;
+  --text: #16171a;
+  --muted: #5f6066;
+  --line: #dcdad3;
+  --ink: #16171a;         /* 主按钮：近黑 */
+  --ink-fg: #ffffff;
+  --accent: #23466e;      /* 墨蓝：结果数字、强调 */
+  --accent-2: #23466e;
+  --wash-1: #b9c8d8;      /* 水墨插图用色 */
+  --wash-2: #d9d2c3;
+  --wash-3: #8ea3b8;
+  --art-soft: #dde4ec;
+  --art-soft2: #eef1f4;
+  --art-mid: #8ea3b8;
+  --radius: 18px;
+  --font-sans: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", "Helvetica Neue", Arial, sans-serif;
+  --font-serif: "Songti SC", "STSong", "Noto Serif SC", "Source Han Serif SC", Georgia, SimSun, serif;
+  color-scheme: light dark;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #111214;
+    --bg-alt: #17181b;
+    --card: #1d1e22;
+    --text: #f2f1ee;
+    --muted: #a3a3a8;
+    --line: #34353a;
+    --ink: #f2f1ee;
+    --ink-fg: #111214;
+    --accent: #9dbbe0;
+    --accent-2: #9dbbe0;
+    --wash-1: #2c3b4d;
+    --wash-2: #3a3630;
+    --wash-3: #4a6079;
+    --art-soft: #2a3340;
+    --art-soft2: #22272f;
+    --art-mid: #5f7690;
+  }
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 17px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+a { color: var(--accent-2); text-decoration: none; }
+a:hover { text-decoration: underline; }
+h1, h2, h3 { margin: 0; letter-spacing: -0.01em; }
+.wrap { max-width: 1040px; margin: 0 auto; padding: 0 20px; }
+.section { padding: 88px 0; }
+.section.alt { background: var(--bg-alt); }
+.eyebrow { color: var(--muted); font-size: 15px; font-weight: 600; letter-spacing: .04em; }
+.h2 { font-family: var(--font-serif); font-size: clamp(30px, 5vw, 44px); font-weight: 700; margin: 6px 0 36px; }
+@media (max-width: 640px) { .section { padding: 64px 0; } body { font-size: 16px; } }

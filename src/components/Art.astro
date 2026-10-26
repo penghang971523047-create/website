@@ -1,0 +1,165 @@
+---
+// 项目小 Demo：用会动的示意图演示每个工具在做什么（数字都是示例）。以后可换成真实录屏。
+interface Props { kind: 'funnel' | 'flow' | 'graph' | 'chart' | 'hub' }
+const { kind } = Astro.props;
+---
+<svg class={`art art-${kind}`} viewBox="0 0 320 180" role="img" aria-label="项目演示动画">
+  {kind === 'funnel' && (
+    <g>
+      <text x="20" y="22" class="cap">新资料</text>
+      <text x="236" y="22" class="cap">去向</text>
+      {[
+        { y: 34, tag: '公开 · 脱敏', to: 0, ok: true },
+        { y: 82, tag: '私密', to: 1, ok: true },
+        { y: 130, tag: '密钥 ✕', to: -1, ok: false },
+      ].map((l, i) => (
+        <g class="lead" style={`--d:${i * 0.9}s`}>
+          <rect x="20" y={l.y} width="150" height="36" rx="8" class="card-r" />
+          <rect x="30" y={l.y + 9} width="60" height="6" rx="3" class="bar1" />
+          <rect x="30" y={l.y + 21} width="90" height="5" rx="2.5" class="bar2" />
+          <g class={`tag ${l.ok ? '' : 'bad'}`}>
+            <rect x="104" y={l.y + 6} width="60" height="16" rx="8" />
+            <text x="134" y={l.y + 17.5} text-anchor="middle">{l.tag}</text>
+          </g>
+          {l.ok && <circle cx="176" cy={l.y + 18} r="4" class="pkt" style={`--ty:${(l.to === 0 ? 62 : 126) - (l.y + 18)}px`} />}
+        </g>
+      ))}
+      {[62, 126].map((cy, i) => (
+        <g>
+          <circle cx="262" cy={cy} r="20" class="who" />
+          <text x="262" y={cy + 4} text-anchor="middle" class="who-t">{i === 0 ? '网站' : '本机'}</text>
+        </g>
+      ))}
+    </g>
+  )}
+  {kind === 'flow' && (
+    <g>
+      {['选题', '初稿', '改写', '分发'].map((t, i) => (
+        <g>
+          <rect x={14 + i * 76} y="52" width="62" height="40" rx="10" class="node" style={`--d:${i * 0.8}s`} />
+          <text x={45 + i * 76} y="76.5" text-anchor="middle" class="node-t">{t}</text>
+          {i < 3 && <path d={`M${78 + i * 76} 72 H${88 + i * 76}`} class="link" />}
+        </g>
+      ))}
+      <rect x="14" y="110" width="290" height="6" rx="3" class="track" />
+      <rect x="14" y="110" width="290" height="6" rx="3" class="fill" />
+      {['IG', 'FB', 'X'].map((t, i) => (
+        <g class="chip" style={`--d:${3.2 + i * 0.25}s`}>
+          <rect x={150 + i * 52} y="132" width="46" height="20" rx="10" />
+          <text x={173 + i * 52} y="145.5" text-anchor="middle">{t}</text>
+        </g>
+      ))}
+      <text x="14" y="146" class="cap">一条观点 → 三平台</text>
+    </g>
+  )}
+  {kind === 'graph' && (
+    <g>
+      <rect x="16" y="14" width="150" height="26" rx="13" class="ask" />
+      <text x="91" y="31" text-anchor="middle" class="ask-t">我们的报价规则是什么？</text>
+      {[[40, 70], [96, 62], [150, 78], [64, 108], [130, 112]].map(([x, y], i) => (
+        <g>
+          <rect x={x - 22} y={y - 10} width="44" height="20" rx="4" class={`doc ${i === 1 || i === 4 ? 'hit' : ''}`} />
+        </g>
+      ))}
+      <path d="M118 62 L196 70 M152 112 L196 92" class="link hitlink" />
+      <rect x="196" y="56" width="110" height="94" rx="10" class="card-r" />
+      <text x="208" y="76" class="cap">回答（附出处）</text>
+      {[0, 1, 2, 3].map((i) => (
+        <rect x="208" y={86 + i * 14} width={i === 3 ? 50 : 86} height="6" rx="3" class="type" style={`--d:${2 + i * 0.4}s`} />
+      ))}
+    </g>
+  )}
+  {kind === 'chart' && (
+    <g>
+      <rect x="16" y="16" width="288" height="148" rx="12" class="card-r" />
+      <text x="30" y="38" class="cap">台股行情 · 示例</text>
+      {[0, 1, 2].map((i) => <path d={`M30 ${70 + i * 30} H290`} class="grid" />)}
+      <path d="M30 128 L64 118 L96 122 L128 98 L160 106 L192 84 L224 90 L252 60 L290 66" class="line" pathLength="1" />
+      <circle cx="252" cy="60" r="5" class="dot" />
+      <g class="alert">
+        <rect x="190" y="26" width="98" height="24" rx="12" />
+        <text x="239" y="42" text-anchor="middle">异动提醒 +5.2%</text>
+      </g>
+    </g>
+  )}
+  {kind === 'hub' && (
+    <g>
+      {[[52, 40, '写作'], [268, 40, '编码'], [52, 140, '检索'], [268, 140, '数据']].map(([x, y, t], i) => (
+        <g>
+          <path d={`M160 90 L${x} ${y}`} class="link thin" />
+          <rect x={(x as number) - 26} y={(y as number) - 14} width="52" height="28" rx="8" class="node" style={`--d:${i * 0.6}s`} />
+          <text x={x} y={(y as number) + 4.5} text-anchor="middle" class="node-t">{t}</text>
+          <circle cx="160" cy="90" r="4" class="pkt2" style={`--tx:${(x as number) - 160}px;--ty:${(y as number) - 90}px;--d:${i * 0.6}s`} />
+        </g>
+      ))}
+      <circle cx="160" cy="90" r="30" class="core" />
+      <text x="160" y="95" text-anchor="middle" class="core-t">规划</text>
+    </g>
+  )}
+</svg>
+
+<style>
+  .art { width: 100%; height: auto; display: block; font-family: var(--font-sans); }
+  .art text { font-size: 10px; fill: var(--text); }
+  .cap { fill: var(--muted) !important; font-size: 10px; }
+  .card-r { fill: var(--card); stroke: var(--line); }
+  .bar1 { fill: var(--art-mid); opacity: .7; }
+  .bar2 { fill: var(--art-soft); }
+  .tag rect { fill: var(--accent); }
+  .tag text { fill: var(--card) !important; font-size: 9px; }
+  .tag.bad rect { fill: var(--line); }
+  .tag.bad text { fill: var(--muted) !important; }
+  .who { fill: var(--art-soft2); stroke: var(--art-mid); }
+  .who-t { font-size: 9.5px; }
+  .node { fill: var(--art-soft2); stroke: var(--line); }
+  .node-t { font-size: 11px; }
+  .link { fill: none; stroke: var(--art-mid); stroke-width: 2; stroke-linecap: round; }
+  .thin { stroke-width: 1.5; opacity: .7; }
+  .track { fill: var(--art-soft2); }
+  .fill { fill: var(--accent); }
+  .chip rect { fill: var(--card); stroke: var(--accent); }
+  .chip text { font-size: 9.5px; fill: var(--accent) !important; }
+  .ask { fill: var(--accent); }
+  .ask-t { fill: var(--card) !important; font-size: 9.5px; }
+  .doc { fill: var(--art-soft2); stroke: var(--line); }
+  .type { fill: var(--art-mid); }
+  .grid { stroke: var(--line); stroke-dasharray: 2 4; }
+  .line { fill: none; stroke: var(--accent); stroke-width: 2.5; stroke-linejoin: round; stroke-linecap: round; }
+  .dot { fill: var(--accent); }
+  .alert rect { fill: var(--accent); }
+  .alert text { fill: var(--card) !important; font-size: 9.5px; }
+  .core { fill: var(--accent); }
+  .core-t { fill: var(--card) !important; font-size: 12px; font-weight: 600; }
+  .pkt, .pkt2 { fill: var(--accent); }
+
+  /* 动画：每个循环约 6 秒 */
+  @media (prefers-reduced-motion: no-preference) {
+    .lead { animation: slideIn 6s var(--d) infinite both; }
+    .lead .tag { animation: pop 6s var(--d) infinite both; transform-box: fill-box; transform-origin: center; }
+    .lead .pkt { animation: travel 6s var(--d) infinite both; }
+    .tag.bad { animation-name: popBad; }
+    .art-flow .node { animation: glow 4.8s var(--d) infinite both; }
+    .art-flow .fill { animation: grow 4.8s infinite both; transform-box: fill-box; transform-origin: left; }
+    .chip { animation: pop 4.8s var(--d) infinite both; transform-box: fill-box; transform-origin: center; }
+    .doc.hit { animation: hit 5s 1s infinite both; }
+    .hitlink { animation: fadeLink 5s 1s infinite both; }
+    .type { animation: typeIn 5s var(--d) infinite both; transform-box: fill-box; transform-origin: left; }
+    .line { stroke-dasharray: 1; animation: draw 6s infinite both; }
+    .dot, .alert { animation: pop 6s 2.6s infinite both; transform-box: fill-box; transform-origin: center; }
+    .art-hub .node { animation: glow 2.4s var(--d) infinite both; }
+    .pkt2 { animation: out 2.4s var(--d) infinite both; }
+    .core { animation: breathe 2.4s infinite ease-in-out; transform-box: fill-box; transform-origin: center; }
+  }
+  @keyframes slideIn { 0% { opacity: 0; transform: translateX(-12px); } 8%, 85% { opacity: 1; transform: none; } 100% { opacity: 0; } }
+  @keyframes pop { 0%, 18% { opacity: 0; transform: scale(.8); } 26%, 88% { opacity: 1; transform: scale(1); } 100% { opacity: 0; } }
+  @keyframes popBad { 0%, 18% { opacity: 0; } 26%, 88% { opacity: 1; } 100% { opacity: 0; } }
+  @keyframes travel { 0%, 30% { opacity: 0; transform: translate(0, 0); } 34% { opacity: 1; } 55% { opacity: 1; transform: translate(64px, var(--ty)); } 60%, 100% { opacity: 0; transform: translate(64px, var(--ty)); } }
+  @keyframes glow { 0%, 100% { fill: var(--art-soft2); } 12%, 30% { fill: var(--art-soft); stroke: var(--accent); } }
+  @keyframes grow { 0% { transform: scaleX(0); } 70%, 100% { transform: scaleX(1); } }
+  @keyframes hit { 0%, 15% { fill: var(--art-soft2); } 25%, 90% { fill: var(--art-soft); stroke: var(--accent); } 100% { fill: var(--art-soft2); } }
+  @keyframes fadeLink { 0%, 20% { opacity: 0; } 30%, 90% { opacity: 1; } 100% { opacity: 0; } }
+  @keyframes typeIn { 0% { transform: scaleX(0); } 12%, 90% { transform: scaleX(1); } 100% { transform: scaleX(0); } }
+  @keyframes draw { 0% { stroke-dashoffset: 1; } 45%, 92% { stroke-dashoffset: 0; } 100% { stroke-dashoffset: 1; } }
+  @keyframes out { 0% { opacity: 0; transform: translate(0, 0); } 10% { opacity: 1; } 45% { opacity: 1; transform: translate(var(--tx), var(--ty)); } 55%, 100% { opacity: 0; transform: translate(var(--tx), var(--ty)); } }
+  @keyframes breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.06); } }
+</style>

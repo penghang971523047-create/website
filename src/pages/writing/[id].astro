@@ -1,0 +1,28 @@
+---
+import Base from '../../layouts/Base.astro';
+import { getCollection, render } from 'astro:content';
+export async function getStaticPaths() {
+  const posts = await getCollection('writing', (p) => !p.data.draft);
+  return posts.map((post) => ({ params: { id: post.id }, props: { post } }));
+}
+const { post } = Astro.props;
+const { Content } = await render(post);
+const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
+---
+<Base title={`${post.data.title} · Helix`} description={post.data.summary}>
+  <main class="section"><article class="wrap prose">
+    <a class="back" href={`${base}writing/`}>← 全部文章</a>
+    <h1>{post.data.title}</h1>
+    <p class="meta">{post.data.date.toISOString().slice(0, 10)}{post.data.source && <> · <a href={post.data.source}>原文</a></>}</p>
+    <Content />
+  </article></main>
+</Base>
+<style>
+  .prose { max-width: 680px; }
+  .back { font-size: 14px; }
+  h1 { font-family: var(--font-serif); font-size: clamp(28px, 4.5vw, 40px); line-height: 1.25; margin-top: 18px; text-wrap: balance; }
+  .meta { color: var(--muted); font-size: 14px; }
+  .prose :global(h2) { font-family: var(--font-serif); font-size: 24px; margin: 36px 0 8px; }
+  .prose :global(p) { margin: 14px 0; }
+  .prose :global(blockquote) { margin: 20px 0; padding: 4px 18px; border-left: 3px solid var(--line); color: var(--muted); }
+</style>

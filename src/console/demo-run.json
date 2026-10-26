@@ -1,0 +1,67 @@
+{
+  "name": "周一早班自动化",
+  "date": "2026-10-26",
+  "isDemo": true,
+  "tasks": [
+    {
+      "id": "T1", "title": "批量整理 30 份劳动争议判决书要点", "executor": "dsh", "model": "DeepSeek Flash",
+      "brief": "逐份提取：案由、争议焦点、裁判要旨、引用法条；统一成表格；无法判断的字段标「待人工」。",
+      "result": { "status": "OK", "file": "runs/2026-10-26/T1/judgments.csv", "summary": "30 份全部完成，27 份字段齐全，3 份标「待人工」。", "confidence": 0.86 },
+      "costCny": 0.42, "costIfStrongCny": 6.80
+    },
+    {
+      "id": "T2", "title": "生成律所咨询线索周报", "executor": "dsh", "model": "DeepSeek Flash",
+      "brief": "汇总上周线索：按案由、来源、意向分布统计，列出 5 条待跟进高意向线索（已脱敏）。",
+      "result": { "status": "OK", "file": "runs/2026-10-26/T2/leads-weekly.md", "summary": "共 64 条线索，高意向 11 条，劳动争议占比最高。", "confidence": 0.91 },
+      "costCny": 0.18, "costIfStrongCny": 3.20
+    },
+    {
+      "id": "T3", "title": "修复个人网站构建报错", "executor": "codex", "model": "Codex",
+      "brief": "复现 npm run build 报错，定位原因，给出最小修改并跑通构建。",
+      "result": { "status": "OK", "file": "runs/2026-10-26/T3/patch.diff", "summary": "内容集合字段类型不匹配，改 1 处，构建通过。", "confidence": 0.95 },
+      "costCny": 0.60, "costIfStrongCny": 2.40
+    },
+    {
+      "id": "T4", "title": "本周公众号选题与提纲", "executor": "dsh", "model": "DeepSeek Pro",
+      "brief": "围绕「AI 进入律所」给 3 个选题，每个附提纲和至少 2 条法规或案例出处。",
+      "result": { "status": "OK", "file": "runs/2026-10-26/T4/topics.md", "summary": "第二版补齐出处，3 个选题均有 2 条以上引用。", "confidence": 0.82 },
+      "costCny": 0.36, "costIfStrongCny": 5.10
+    },
+    {
+      "id": "T5", "title": "更新 STATUS 与 DECISIONS", "executor": "claude", "model": "Claude Code",
+      "brief": "汇总本轮结果，更新进度；记录「选题类任务需附出处」为新规则。",
+      "result": { "status": "OK", "file": "STATUS.md", "summary": "4 项完成，1 次打回已记录为新规则。", "confidence": 0.97 },
+      "costCny": 0.28, "costIfStrongCny": 0.28
+    }
+  ],
+  "events": [
+    { "t": 0.5, "task": "T1", "type": "create", "from": "intake", "to": "brain", "msg": "收到任务：整理 30 份判决书" },
+    { "t": 2.0, "task": "T2", "type": "create", "from": "intake", "to": "brain", "msg": "定时任务触发：线索周报" },
+    { "t": 3.0, "task": "T1", "type": "plan", "from": "brain", "to": "brain", "msg": "拆成 3 批，每批 10 份，写任务单" },
+    { "t": 4.0, "task": "T1", "type": "dispatch", "from": "brain", "to": "dsh", "msg": "批量活 → dsh · DeepSeek Flash" },
+    { "t": 5.0, "task": "T3", "type": "create", "from": "intake", "to": "brain", "msg": "收到任务：网站构建报错" },
+    { "t": 6.0, "task": "T2", "type": "dispatch", "from": "brain", "to": "dsh", "msg": "统计汇总 → dsh · DeepSeek Flash" },
+    { "t": 7.5, "task": "T3", "type": "dispatch", "from": "brain", "to": "codex", "msg": "找 bug → Codex" },
+    { "t": 9.0, "task": "T4", "type": "create", "from": "intake", "to": "brain", "msg": "收到任务：本周公众号选题" },
+    { "t": 10.5, "task": "T4", "type": "dispatch", "from": "brain", "to": "dsh", "msg": "写作初稿 → dsh · DeepSeek Pro" },
+    { "t": 12.0, "task": "T2", "type": "write", "from": "dsh", "to": "runs", "msg": "产出写入 runs/T2/leads-weekly.md" },
+    { "t": 13.5, "task": "T2", "type": "review", "from": "runs", "to": "review", "msg": "Claude 验收：数字与原始表核对" },
+    { "t": 15.0, "task": "T2", "type": "accept", "from": "review", "to": "status", "msg": "通过 · 置信度 0.91" },
+    { "t": 16.0, "task": "T3", "type": "write", "from": "codex", "to": "runs", "msg": "补丁写入 runs/T3/patch.diff" },
+    { "t": 17.5, "task": "T3", "type": "review", "from": "runs", "to": "review", "msg": "Claude 验收：重跑构建" },
+    { "t": 19.0, "task": "T3", "type": "accept", "from": "review", "to": "status", "msg": "通过 · 构建成功" },
+    { "t": 20.0, "task": "T4", "type": "write", "from": "dsh", "to": "runs", "msg": "初稿写入 runs/T4/topics.md" },
+    { "t": 21.5, "task": "T4", "type": "review", "from": "runs", "to": "review", "msg": "Claude 验收：检查引用出处" },
+    { "t": 23.0, "task": "T4", "type": "reject", "from": "review", "to": "brain", "msg": "打回：2 个选题缺少法规出处" },
+    { "t": 24.5, "task": "T4", "type": "dispatch", "from": "brain", "to": "dsh", "msg": "补充要求后重派 → dsh" },
+    { "t": 26.0, "task": "T1", "type": "write", "from": "dsh", "to": "runs", "msg": "30 份完成，写入 runs/T1/judgments.csv" },
+    { "t": 27.5, "task": "T1", "type": "review", "from": "runs", "to": "review", "msg": "Claude 验收：抽查 5 份" },
+    { "t": 29.0, "task": "T1", "type": "accept", "from": "review", "to": "status", "msg": "通过 · 3 份标「待人工」" },
+    { "t": 30.5, "task": "T4", "type": "write", "from": "dsh", "to": "runs", "msg": "第二版写入 runs/T4/topics.md" },
+    { "t": 32.0, "task": "T4", "type": "review", "from": "runs", "to": "review", "msg": "Claude 验收：出处齐全" },
+    { "t": 33.5, "task": "T4", "type": "accept", "from": "review", "to": "status", "msg": "通过 · 置信度 0.82" },
+    { "t": 34.5, "task": "T5", "type": "create", "from": "brain", "to": "brain", "msg": "本轮收尾：更新状态" },
+    { "t": 35.5, "task": "T5", "type": "status", "from": "brain", "to": "status", "msg": "STATUS 更新；DECISIONS 新增 1 条规则" },
+    { "t": 37.0, "task": "T5", "type": "accept", "from": "status", "to": "status", "msg": "本轮完成：5/5，打回 1 次" }
+  ]
+}
