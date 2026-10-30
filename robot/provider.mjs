@@ -8,7 +8,8 @@ export function createProvider({
   timeoutMs = 12_000,
 } = {}) {
   if (!apiKey) throw new Error('MXZ_API_KEY is required for live mode');
-  const endpoint = new URL('/chat/completions', baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`);
+  const normalizedBase = baseUrl.replace(/\/+$/, '');
+  const endpoint = new URL(`${normalizedBase}/chat/completions`);
   if (endpoint.protocol !== 'https:' || endpoint.username || endpoint.password || endpoint.search || endpoint.hash) {
     throw new Error('MXZ_BASE_URL must be an HTTPS origin without embedded credentials');
   }
